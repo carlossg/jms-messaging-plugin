@@ -1,5 +1,7 @@
 package com.redhat.jenkins.plugins.ci.authentication.activemq;
 
+import javax.jms.ConnectionFactory;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 import com.redhat.jenkins.plugins.ci.authentication.AuthenticationMethod;
@@ -31,5 +33,5 @@ public abstract class ActiveMQAuthenticationMethod extends AuthenticationMethod 
 
     private static final long serialVersionUID = -6077120270692721571L;
 
-    public abstract ActiveMQConnectionFactory getConnectionFactory(String broker);
+    public abstract ConnectionFactory getConnectionFactory(String broker);
 }
