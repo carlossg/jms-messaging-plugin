@@ -1,24 +1,8 @@
-node('docker') {
-    /* clean out the workspace just to be safe */
-    deleteDir()
+#!/usr/bin/env groovy
 
-    /* Grab our source for this build */
-    checkout scm
-
-    String containerArgs = '-v /var/run/docker.sock:/var/run/docker.sock --shm-size 2g'
-    stage('Test') {
-        docker.image('jenkins/ath:acceptance-test-harness-1.65').inside(containerArgs) {
-            sh '''
-                eval $(./vnc.sh 2> /dev/null)
-                mvn clean install -DskipTests
-                mvn test -Dmaven.test.failure.ignore=true -DElasticTime.factor=2 -Djenkins.version=2.121.1 -DforkCount=1 -B
-            '''
-        }
-    }
-
-    stage('Archive') {
-        junit 'target/surefire-reports/**/*.xml'
-        archiveArtifacts artifacts: 'target/**/jms-messaging.hpi', fingerprint: true
-        archiveArtifacts artifacts: 'target/diagnostics/**', allowEmptyArchive: true
-    }
-}
+/* `buildPlugin` step provided by: https://github.com/jenkins-infra/pipeline-library */
+buildPlugin(timeout: 180, configurations: [
+    [ platform: "windows", jdk: "8", jenkins: null ],
+    [ platform: "docker && highmem", jdk: "8", jenkins: null ],
+    [ platform: "docker && highmem", jdk: "11", jenkins: null ]
+])
