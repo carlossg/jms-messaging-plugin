@@ -9,17 +9,25 @@ import hudson.util.FormValidation;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+
 import org.apache.activemq.ActiveMQSslConnectionFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.qpid.jms.jndi.JmsInitialContextFactory;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
+import javax.annotation.CheckForNull;
 import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
 import javax.jms.Session;
+import javax.naming.Context;
+import javax.naming.NamingException;
 import javax.servlet.ServletException;
+
+import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -102,18 +110,35 @@ public class SSLCertificateAuthenticationMethod extends ActiveMQAuthenticationMe
     }
 
     @Override
-    public ActiveMQSslConnectionFactory getConnectionFactory(String broker) {
-        try {
-            ActiveMQSslConnectionFactory connectionFactory = new ActiveMQSslConnectionFactory(broker);
-            connectionFactory.setKeyStore(getSubstitutedValue(getKeystore()));
-            connectionFactory.setKeyStorePassword(Secret.toString(getKeypwd()));
-            connectionFactory.setTrustStore(getSubstitutedValue(getTruststore()));
-            connectionFactory.setTrustStorePassword(Secret.toString(getTrustpwd()));
-            return connectionFactory;
-        } catch (Exception e) {
-            log.log(Level.SEVERE, "Unhandled exception creating connection factory.", e);;
-        }
-        return null;
+    @CheckForNull
+    public ConnectionFactory getConnectionFactory(String broker) {
+	if (broker.startsWith("amqp")) {
+	    try {
+		Hashtable<Object, Object> env = new Hashtable<Object, Object>();
+		env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
+		env.put("connectionfactory.myFactoryLookup", broker);
+		env.put("transport.keyStoreLocation", getSubstitutedValue(getKeystore()));
+		env.put("transport.keyStorePassword", Secret.toString(getKeypwd()));
+		env.put("transport.trustStoreLocation", getSubstitutedValue(getTruststore()));
+		env.put("transport.trustStorePassword", Secret.toString(getTrustpwd()));
+		Context context = new JmsInitialContextFactory().getInitialContext(env);
+		return (ConnectionFactory) context.lookup("myFactoryLookup");
+	    } catch (NamingException e) {
+		throw new RuntimeException(e);
+	    }
+	} else {
+	    try {
+		ActiveMQSslConnectionFactory connectionFactory = new ActiveMQSslConnectionFactory(broker);
+		connectionFactory.setKeyStore(getSubstitutedValue(getKeystore()));
+		connectionFactory.setKeyStorePassword(Secret.toString(getKeypwd()));
+		connectionFactory.setTrustStore(getSubstitutedValue(getTruststore()));
+		connectionFactory.setTrustStorePassword(Secret.toString(getTrustpwd()));
+		return connectionFactory;
+	    } catch (Exception e) {
+		log.log(Level.SEVERE, "Unhandled exception creating connection factory.", e);
+	    }
+	}
+	return null;
     }
 
     @Override
@@ -154,7 +179,7 @@ public class SSLCertificateAuthenticationMethod extends ActiveMQAuthenticationMe
             if (broker != null && isValidURL(broker)) {
                 try {
                     SSLCertificateAuthenticationMethod sam = new SSLCertificateAuthenticationMethod(keystore, Secret.fromString(keypwd), truststore, Secret.fromString(trustpwd));
-                    ActiveMQSslConnectionFactory connectionFactory = sam.getConnectionFactory(broker);
+                    ConnectionFactory connectionFactory = sam.getConnectionFactory(broker);
                     connection = connectionFactory.createConnection();
                     connection.start();
                     session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);

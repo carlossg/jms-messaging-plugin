@@ -1,26 +1,35 @@
 package com.redhat.jenkins.plugins.ci.authentication.activemq;
 
-import com.redhat.jenkins.plugins.ci.Messages;
-import hudson.Extension;
-import hudson.model.Descriptor;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
-import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
+import java.util.Hashtable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
+import javax.jms.Session;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.servlet.ServletException;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.qpid.jms.JmsConnectionFactory;
+import org.apache.qpid.jms.jndi.JmsInitialContextFactory;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
-import javax.jms.Connection;
-import javax.jms.JMSException;
-import javax.jms.Session;
-import javax.servlet.ServletException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.redhat.jenkins.plugins.ci.Messages;
+
+import hudson.Extension;
+import hudson.model.Descriptor;
+import hudson.util.FormValidation;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
 
 /*
  * The MIT License
@@ -77,8 +86,23 @@ public class UsernameAuthenticationMethod extends ActiveMQAuthenticationMethod  
     }
 
     @Override
-    public ActiveMQConnectionFactory getConnectionFactory(String broker) {
-        return new ActiveMQConnectionFactory(getUsername(), getPassword().getPlainText(), broker);
+    public ConnectionFactory getConnectionFactory(String broker) {
+	if (broker.startsWith("amqp")) {
+	    try {
+		Hashtable<Object, Object> env = new Hashtable<Object, Object>();
+		env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
+		env.put("connectionfactory.myFactoryLookup", broker);
+		Context context = new JmsInitialContextFactory().getInitialContext(env);
+		JmsConnectionFactory connectionFactory = (JmsConnectionFactory) context.lookup("myFactoryLookup");
+		connectionFactory.setUsername(this.username);
+		connectionFactory.setPassword(this.password.getPlainText());
+		return connectionFactory;
+	    } catch (NamingException e) {
+		throw new RuntimeException(e);
+	    }
+	} else {
+	    return new ActiveMQConnectionFactory(getUsername(), getPassword().getPlainText(), broker);
+	}
     }
 
     @Override
@@ -116,7 +140,7 @@ public class UsernameAuthenticationMethod extends ActiveMQAuthenticationMethod  
             if (broker != null && isValidURL(broker)) {
                 try {
                     UsernameAuthenticationMethod uam = new UsernameAuthenticationMethod(username, Secret.fromString(password));
-                    ActiveMQConnectionFactory connectionFactory = uam.getConnectionFactory(broker);
+                    ConnectionFactory connectionFactory = uam.getConnectionFactory(broker);
                     connection = connectionFactory.createConnection();
                     connection.start();
                     session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
