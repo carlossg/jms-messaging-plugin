@@ -1,9 +1,9 @@
-package com.redhat.jenkins.plugins.ci.integration.docker.fixtures;
-
-import org.jenkinsci.test.acceptance.docker.DockerContainer;
-import org.jenkinsci.test.acceptance.docker.DockerFixture;
+package com.redhat.jenkins.plugins.ci.integration;
 
 import java.io.IOException;
+
+import org.jenkinsci.test.acceptance.junit.WithDocker;
+import org.jenkinsci.test.acceptance.junit.WithPlugins;
 
 /*
  * The MIT License
@@ -28,15 +28,17 @@ import java.io.IOException;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-@DockerFixture(id="activeamq", ports={61616,8161,5672})
-public class ActiveMQContainer extends DockerContainer {
+@WithPlugins({"jms-messaging", "dumpling"})
+@WithDocker
+public class AmqpMessagingPluginIntegrationTest extends AmqMessagingPluginIntegrationTest {
 
-    public String getBroker() throws IOException {
-        return String.format("tcp://%s:%d", ipBound(61616), port(61616));
-
+    @Override
+    protected String getBroker() throws IOException {
+        return amq.getAmqpBroker();
     }
-    public String getAmqpBroker() throws IOException {
-        return String.format("amqp://%s:%d", ipBound(5672), port(5672));
 
+    @Override
+    protected String getThreadNameRegex() {
+        return "QpidJMS Connection Executor";
     }
 }
