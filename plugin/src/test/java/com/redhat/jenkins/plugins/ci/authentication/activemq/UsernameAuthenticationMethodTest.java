@@ -53,24 +53,26 @@ public class UsernameAuthenticationMethodTest {
 
     @Before
     public void setup() {
-	method = new UsernameAuthenticationMethod(USER, Secret.fromString(PASSWORD));
+        method = new UsernameAuthenticationMethod(USER, Secret.fromString(PASSWORD));
     }
 
     @Test
     public void testGetConnectionFactoryTcp() {
-	ConnectionFactory factory = method.getConnectionFactory("tcp://example.com");
-	assertTrue(factory instanceof ActiveMQConnectionFactory);
-	ActiveMQConnectionFactory f = (ActiveMQConnectionFactory) factory;
-	assertEquals(USER, f.getUserName());
-	assertEquals(PASSWORD, f.getPassword());
+        ConnectionFactory factory = method.getConnectionFactory("tcp://example.com");
+        assertTrue(factory instanceof ActiveMQConnectionFactory);
+        ActiveMQConnectionFactory f = (ActiveMQConnectionFactory) factory;
+        assertEquals(USER, f.getUserName());
+        assertEquals(PASSWORD, f.getPassword());
     }
 
     @Test
     public void testGetConnectionFactoryAmqp() {
-	ConnectionFactory factory = method.getConnectionFactory("amqp://example.com");
-	assertTrue(factory instanceof JmsConnectionFactory);
-	JmsConnectionFactory f = (JmsConnectionFactory) factory;
-	assertEquals(USER, f.getUsername());
-	assertEquals(PASSWORD, f.getPassword());
+        String uri = "amqps://example.com";
+        ConnectionFactory factory = method.getConnectionFactory(uri);
+        assertTrue(factory instanceof JmsConnectionFactory);
+        JmsConnectionFactory f = (JmsConnectionFactory) factory;
+        assertEquals(uri, f.getRemoteURI());
+        assertEquals(USER, f.getUsername());
+        assertEquals(PASSWORD, f.getPassword());
     }
 }

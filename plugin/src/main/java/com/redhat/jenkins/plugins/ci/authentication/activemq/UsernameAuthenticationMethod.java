@@ -1,10 +1,5 @@
 package com.redhat.jenkins.plugins.ci.authentication.activemq;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -12,14 +7,11 @@ import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
 import javax.jms.Session;
-import javax.naming.Context;
-import javax.naming.NamingException;
 import javax.servlet.ServletException;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.qpid.jms.JmsConnectionFactory;
-import org.apache.qpid.jms.jndi.JmsInitialContextFactory;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -27,7 +19,6 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import com.redhat.jenkins.plugins.ci.Messages;
-import com.redhat.jenkins.plugins.ci.authentication.AuthenticationMethod;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
@@ -93,18 +84,7 @@ public class UsernameAuthenticationMethod extends ActiveMQAuthenticationMethod  
     @Override
     public ConnectionFactory getConnectionFactory(String broker) {
         if (broker.startsWith("amqp")) {
-            try {
-                Hashtable<Object, Object> env = new Hashtable<Object, Object>();
-                env.put(Context.INITIAL_CONTEXT_FACTORY, "org.apache.qpid.jms.jndi.JmsInitialContextFactory");
-                env.put("connectionfactory.myFactoryLookup", broker);
-                Context context = new JmsInitialContextFactory().getInitialContext(env);
-                JmsConnectionFactory connectionFactory = (JmsConnectionFactory) context.lookup("myFactoryLookup");
-                connectionFactory.setUsername(this.username);
-                connectionFactory.setPassword(this.password.getPlainText());
-                return connectionFactory;
-            } catch (NamingException e) {
-                throw new RuntimeException(e);
-            }
+            return new JmsConnectionFactory(this.username, this.password.getPlainText(), broker);
         } else {
             return new ActiveMQConnectionFactory(getUsername(), getPassword().getPlainText(), broker);
         }
