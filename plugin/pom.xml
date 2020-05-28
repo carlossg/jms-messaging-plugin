@@ -247,16 +247,6 @@
                 <artifactId>proton-j</artifactId>
                 <version>0.33.2</version>
             </dependency>
-            <dependency>
-                <groupId>org.jenkins-ci.plugins</groupId>
-                <artifactId>junit</artifactId>
-                <version>1.6</version>
-            </dependency>
-            <dependency>
-                <groupId>commons-net</groupId>
-                <artifactId>commons-net</artifactId>
-                <version>3.6</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 

@@ -39,4 +39,8 @@ public class ActiveMQContainer extends DockerContainer {
         return String.format("amqp://%s:%d", ipBound(5672), port(5672));
 
     }
+    public String getAmqpBroker() throws IOException {
+        return String.format("amqp://%s:%d", ipBound(5672), port(5672));
+
+    }
 }
