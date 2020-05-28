@@ -55,24 +55,29 @@ public class SSLCertificateAuthenticationMethodTest {
 
     @Before
     public void setup() {
-	method = new SSLCertificateAuthenticationMethod(KEYSTORE, Secret.fromString(KEYPWD),TRUSTSTORE, Secret.fromString(TRUSTPASSWORD));
+        method = new SSLCertificateAuthenticationMethod(KEYSTORE, Secret.fromString(KEYPWD), TRUSTSTORE,
+                Secret.fromString(TRUSTPASSWORD));
     }
 
     @Test
     public void testGetConnectionFactoryTcp() {
-	ConnectionFactory factory = method.getConnectionFactory("tcps://example.com");
-	assertTrue(factory instanceof ActiveMQSslConnectionFactory);
-	ActiveMQSslConnectionFactory f = (ActiveMQSslConnectionFactory) factory;
-	assertEquals(KEYSTORE, f.getKeyStore());
-	assertEquals(KEYPWD, f.getKeyStorePassword());
-	assertEquals(TRUSTSTORE, f.getTrustStore());
-	assertEquals(TRUSTPASSWORD, f.getTrustStorePassword());
+        ConnectionFactory factory = method.getConnectionFactory("tcps://example.com");
+        assertTrue(factory instanceof ActiveMQSslConnectionFactory);
+        ActiveMQSslConnectionFactory f = (ActiveMQSslConnectionFactory) factory;
+        assertEquals(KEYSTORE, f.getKeyStore());
+        assertEquals(KEYPWD, f.getKeyStorePassword());
+        assertEquals(TRUSTSTORE, f.getTrustStore());
+        assertEquals(TRUSTPASSWORD, f.getTrustStorePassword());
     }
 
     @Test
     public void testGetConnectionFactoryAmqp() {
-	ConnectionFactory factory = method.getConnectionFactory("amqps://example.com");
-	assertTrue(factory instanceof JmsConnectionFactory);
-	JmsConnectionFactory f = (JmsConnectionFactory) factory;
+        String uri = "amqps://example.com";
+        ConnectionFactory factory = method.getConnectionFactory(uri);
+        assertTrue(factory instanceof JmsConnectionFactory);
+        JmsConnectionFactory f = (JmsConnectionFactory) factory;
+        assertEquals(String.format(
+                "%s?transport.keyStoreLocation=%s&transport.keyStorePassword=%s&transport.trustStoreLocation=%s&transport.trustStorePassword=%s",
+                uri, KEYSTORE, KEYPWD, TRUSTSTORE, TRUSTPASSWORD), f.getRemoteURI());
     }
 }
